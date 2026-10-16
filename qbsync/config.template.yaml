@@ -1,0 +1,51 @@
+# QB Sync configuration. Restart QB Sync (qbsync service stop/start) after editing.
+# Any value can reference an environment variable: ${NAME} or ${NAME:-default}.
+
+# Full path to the company file as THIS machine sees it. For a file hosted by
+# QuickBooks Database Server Manager, use the UNC path to the share.
+company_file: {{COMPANY_FILE}}
+company_id: {{COMPANY_ID}}   # label sent to sinks (one config per company file)
+
+connection: {{CONNECTION}}      # qbxmlrp2 (real QuickBooks) | mock (sample data, any OS)
+app_name: QB Sync         # name shown in QuickBooks' Integrated Applications list
+qbxml_version: auto       # or pin e.g. "13.0"
+file_mode: dont_care      # dont_care | multi_user | single_user
+
+database: {{DATABASE}}
+log_file: {{LOG_FILE}}
+
+sync:
+  interval_minutes: 15
+  page_size: 250              # records per request; lower it if QuickBooks feels sluggish for users
+  overlap_seconds: 3600       # re-check this window each run (covers clock/DST quirks); dupes are ignored
+  history_start_date: null    # e.g. "2021-01-01" to skip older transactions on the first sync
+  include: []                 # only sync these entities (empty = all)
+  exclude: []                 # e.g. [SalesOrder, InventoryAdjustment] on QuickBooks Pro
+  entities: {}                # per-entity overrides, e.g.
+  #   TimeTracking: {enabled: false}
+  #   Invoice: {include_linked_txns: false}
+  #   Charge: {kind: txn, owner_id: false}   # names not built in define new entities
+
+reports:                       # GeneralSummaryReport snapshots refreshed every sync
+  - {name: profit_and_loss_ytd, type: ProfitAndLossStandard, macro: ThisYearToDate}
+  - {name: profit_and_loss_last_month, type: ProfitAndLossStandard, macro: LastMonth}
+  - {name: profit_and_loss_by_month, type: ProfitAndLossStandard, macro: ThisYearToDate, summarize_by: Month}
+  - {name: balance_sheet, type: BalanceSheetStandard, macro: ThisYearToDate}
+  - {name: customer_balances, type: CustomerBalanceSummary, macro: All}
+  - {name: vendor_balances, type: VendorBalanceSummary, macro: All}
+
+
+sinks:
+  # Push new/changed/deleted records, report snapshots and sync errors after each sync.
+  # Outbound HTTPS only: no inbound ports needed on this machine. Test with: qbsync test-webhook
+  #   url: https://n8n.example.com/webhook/quickbooks
+  #   secret: sent as X-QBSync-Token (n8n Header Auth) and used for X-QBSync-Signature (HMAC-SHA256)
+  #   send_status: errors          # errors | always | never  (sync result events)
+  #   batch_size: 200              # records per request (halved automatically on HTTP 413)
+  #   headers: {}                  # any extra headers
+  webhook: {{WEBHOOK}}
+  postgres: null
+  #   dsn: ${QBSYNC_PG_DSN}                # Supabase: Project Settings > Database > connection string
+  #   schema: public
+  #   table: qb_records
+  #   reports_table: qb_reports

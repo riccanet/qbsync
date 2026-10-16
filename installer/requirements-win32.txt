@@ -1,0 +1,7 @@
+asn1crypto==1.5.1
+pg8000==1.31.5
+python_dateutil==2.9.0.post0
+pywin32==312
+pyyaml==6.0.3
+scramp==1.4.17
+six==1.17.0

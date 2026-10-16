@@ -1,0 +1,11 @@
+config.yaml
+*.db
+*.db-*
+export/
+logs/
+__pycache__/
+*.egg-info/
+.venv/
+.pytest_cache/
+build/
+dist/
