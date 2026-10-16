@@ -20,11 +20,17 @@ from typing import Protocol
 log = logging.getLogger(__name__)
 
 CT_LOCAL_QBD = 1
+# QBXMLRP2 AuthPreferences enums (QBXMLRPUnattendedModePrefType / QBXMLRPPersonalDataPrefType)
+UNATTENDED_MODE = {"optional": 0, "required": 1}
+PERSONAL_DATA = {"optional": 0, "required": 1, "not_needed": 2}
 FILE_MODES = {"single_user": 0, "multi_user": 1, "dont_care": 2}
 MAX_QBXML_VERSION = 16.0
 
 # Common COM failures and what usually fixes them.
 HRESULT_HINTS = {
+    0x80040430: "QuickBooks has not approved automatic login for this app. With QuickBooks open as Admin: Edit > "
+    "Preferences > Integrated Applications > Company Preferences, Remove every QB Sync entry, save, then run "
+    "Test QuickBooks Connection and choose 'Yes, always; allow access even if QuickBooks is not running'.",
     0x80040408: "Could not start QuickBooks. Is QuickBooks Desktop installed on this machine and can this "
     "Windows user open it?",
     0x8004040A: "QuickBooks is open on this PC with a different company file (or the same file through a "
@@ -138,6 +144,9 @@ class RequestProcessorConnection:
         app_id: str = "",
         qbxml_version: str = "auto",
         file_mode: str = "dont_care",
+        unattended_mode: str = "required",
+        read_only: bool = True,
+        personal_data: str = "not_needed",
     ):
         self.company_file = company_file
         self.app_name = app_name
@@ -145,6 +154,9 @@ class RequestProcessorConnection:
         self.requested_version = qbxml_version
         self.qbxml_version = qbxml_version if qbxml_version != "auto" else "13.0"
         self.file_mode = FILE_MODES[file_mode]
+        self.unattended_mode = UNATTENDED_MODE[unattended_mode]
+        self.read_only = bool(read_only)
+        self.personal_data = PERSONAL_DATA[personal_data]
         self._rp = None
         self._ticket = None
         self.open_file: str | None = None  # the company file QuickBooks actually opened
@@ -173,6 +185,7 @@ class RequestProcessorConnection:
                     f"and the installed SDK components. ({_explain_com_error(exc)})"
                 ) from exc
             self._rp.OpenConnection2(self.app_id, self.app_name, CT_LOCAL_QBD)
+            self._set_auth_preferences()
             try:
                 self._ticket = self._rp.BeginSession(self.company_file, self.file_mode)
             except pythoncom.com_error as exc:
@@ -202,6 +215,21 @@ class RequestProcessorConnection:
         if ended:
             error.args = (f"{error.args[0]} (QuickBooks had been started in the background for this attempt "
                           "and was closed again.)",)
+
+    def _set_auth_preferences(self) -> None:
+        """Tell QuickBooks what access to ask the administrator for (must precede BeginSession).
+
+        Requiring unattended mode makes the approval prompt offer only "Yes, always; allow access
+        even if QuickBooks is not running", so the grant actually covers automatic login when
+        QuickBooks is closed. QB Sync only reads, so it asks for read-only access.
+        """
+        try:
+            prefs = self._rp.AuthPreferences
+            prefs.PutUnattendedModePref(self.unattended_mode)
+            prefs.PutIsReadOnly(self.read_only)
+            prefs.PutPersonalDataPref(self.personal_data)
+        except Exception as exc:
+            log.warning("Could not set QuickBooks authorization preferences: %s", _explain_com_error(exc))
 
     def _use_already_open_file(self, original: Exception) -> str:
         """QuickBooks is open on this PC (someone is working in it). If it has the same company file

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qbsync"
-version = "0.3.5"
+version = "0.3.6"
 description = "Read-only sync of QuickBooks Desktop data, pushed to webhooks (n8n) and Postgres."
 requires-python = ">=3.10"
 dependencies = [

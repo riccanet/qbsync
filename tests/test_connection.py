@@ -14,15 +14,32 @@ class ComError(Exception):
         self.excepinfo = None
 
 
+class FakeAuthPrefs:
+    def __init__(self, rp):
+        self.rp = rp
+
+    def PutUnattendedModePref(self, v):
+        self.rp.auth["unattended"] = v
+
+    def PutIsReadOnly(self, v):
+        self.rp.auth["read_only"] = v
+
+    def PutPersonalDataPref(self, v):
+        self.rp.auth["personal_data"] = v
+
+
 class FakeRP:
     def __init__(self, open_in_ui=None):
         self.open_in_ui = open_in_ui  # company file a user has open in QuickBooks on this PC
         self.ended = []
+        self.auth = {}
+        self.AuthPreferences = FakeAuthPrefs(self)
 
     def OpenConnection2(self, app_id, name, ctype):
         pass
 
     def BeginSession(self, path, mode):
+        self.auth_at_begin = dict(self.auth)
         if self.open_in_ui and path and path != self.open_in_ui:
             raise ComError(0x8004040A)
         self.session_file = path or self.open_in_ui
@@ -132,3 +149,13 @@ def test_successful_open_kills_nothing(fake_com, fake_procs):
     conn.open()
     conn.close()
     assert killed == []
+
+
+def test_requests_unattended_read_only_access_before_begin_session(fake_com):
+    rp = FakeRP()
+    fake_com["rp"] = rp
+    conn = RequestProcessorConnection(UNC)
+    conn.open()
+    # umpRequired=1, read-only, pdpNotNeeded=2 -- all set before BeginSession ran
+    assert rp.auth_at_begin == {"unattended": 1, "read_only": True, "personal_data": 2}
+    conn.close()

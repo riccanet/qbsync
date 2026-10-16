@@ -17,6 +17,12 @@ DEFAULTS: dict[str, Any] = {
     "app_id": "",
     "qbxml_version": "auto",
     "file_mode": "dont_care",  # dont_care | single_user | multi_user
+    "auth": {
+        # What QB Sync asks the QuickBooks administrator to approve.
+        "unattended_mode": "required",  # required | optional: sync while QuickBooks is closed
+        "read_only": True,  # QB Sync only reads
+        "personal_data": "not_needed",  # not_needed | optional | required (SSNs, card numbers)
+    },
     "database": "qbsync.db",
     "log_file": None,
     "sync": {

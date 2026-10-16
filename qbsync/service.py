@@ -40,6 +40,9 @@ class SyncService:
             app_id=self.cfg["app_id"],
             qbxml_version=str(self.cfg["qbxml_version"]),
             file_mode=self.cfg["file_mode"],
+            unattended_mode=self.cfg["auth"]["unattended_mode"],
+            read_only=self.cfg["auth"]["read_only"],
+            personal_data=self.cfg["auth"]["personal_data"],
         )
 
     def run_once(self, full: bool = False, only: list[str] | None = None, push: bool = True) -> RunReport:

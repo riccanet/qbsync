@@ -10,6 +10,10 @@ connection: {{CONNECTION}}      # qbxmlrp2 (real QuickBooks) | mock (sample data
 app_name: QB Sync         # name shown in QuickBooks' Integrated Applications list
 qbxml_version: auto       # or pin e.g. "13.0"
 file_mode: dont_care      # dont_care | multi_user | single_user
+auth:                     # what QuickBooks is asked to approve (changing it needs a fresh approval)
+  unattended_mode: required   # required = may sync while QuickBooks is closed
+  read_only: true
+  personal_data: not_needed
 
 database: {{DATABASE}}
 log_file: {{LOG_FILE}}

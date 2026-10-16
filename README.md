@@ -51,11 +51,11 @@ It also adds Start Menu shortcuts: **Test QuickBooks Connection**, **Sync Now**,
 
 ```bat
 :: as the logged-in standard user (per-user, no admin needed)
-QBSync-Setup-0.3.5.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" ^
+QBSync-Setup-0.3.6.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" ^
     /WEBHOOKURL="https://n8n.example.com/webhook/quickbooks" /WEBHOOKSECRET="<shared secret>"
 
 :: from an RMM as SYSTEM (machine-wide; the task runs as the standard user ACME\jsmith)
-QBSync-Setup-0.3.5.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" /USER="ACME\jsmith" ^
+QBSync-Setup-0.3.6.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" /USER="ACME\jsmith" ^
     /WEBHOOKURL="https://n8n.example.com/webhook/quickbooks" /WEBHOOKSECRET="<shared secret>"
 ```
 
@@ -192,6 +192,7 @@ Each sink keeps its own cursor and only moves it forward after a successful deli
 | `0x80040418` app has not accessed this file before | Do the first-time authorization above, as the same Windows user the task runs as |
 | `0x8004040A` a different company file is open | QuickBooks is open on this PC with another company file. QB Sync uses an open session automatically when it's the same file (e.g. opened through a mapped drive), but never syncs a different company |
 | `0x80040408` could not start QuickBooks | QuickBooks and QB Sync must run at the same privilege level: don't set QuickBooks to *Run as administrator*. If a connection attempt fails, QB Sync closes any QuickBooks it started in the background, so you can open QuickBooks normally afterwards |
+| `0x80040430` unable to log in automatically | QuickBooks hasn't approved automatic login. With QuickBooks open as Admin, remove every QB Sync entry under *Edit → Preferences → Integrated Applications → Company Preferences*, save, then run **Test QuickBooks Connection** and choose *Yes, always; allow access even if QuickBooks is not running*. QB Sync asks for unattended, read-only access, so that's the only "yes" option offered |
 | `0x80040416` company file must be specified | Set `company_file` to the full UNC path |
 | `0x8004041A` no permission | Integrated Applications preferences, allow QB Sync |
 | `0x80040414` modal dialog showing | Someone has a QuickBooks dialog open on the sync host. Close it |
