@@ -51,11 +51,11 @@ It also adds Start Menu shortcuts: **Test QuickBooks Connection**, **Sync Now**,
 
 ```bat
 :: as the logged-in standard user (per-user, no admin needed)
-QBSync-Setup-0.3.6.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" ^
+QBSync-Setup-0.3.7.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" ^
     /WEBHOOKURL="https://n8n.example.com/webhook/quickbooks" /WEBHOOKSECRET="<shared secret>"
 
 :: from an RMM as SYSTEM (machine-wide; the task runs as the standard user ACME\jsmith)
-QBSync-Setup-0.3.6.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" /USER="ACME\jsmith" ^
+QBSync-Setup-0.3.7.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" /USER="ACME\jsmith" ^
     /WEBHOOKURL="https://n8n.example.com/webhook/quickbooks" /WEBHOOKSECRET="<shared secret>"
 ```
 
@@ -193,6 +193,8 @@ Each sink keeps its own cursor and only moves it forward after a successful deli
 | `0x8004040A` a different company file is open | QuickBooks is open on this PC with another company file. QB Sync uses an open session automatically when it's the same file (e.g. opened through a mapped drive), but never syncs a different company |
 | `0x80040408` could not start QuickBooks | QuickBooks and QB Sync must run at the same privilege level: don't set QuickBooks to *Run as administrator*. If a connection attempt fails, QB Sync closes any QuickBooks it started in the background, so you can open QuickBooks normally afterwards |
 | `0x80040430` unable to log in automatically | QuickBooks hasn't approved automatic login. With QuickBooks open as Admin, remove every QB Sync entry under *Edit → Preferences → Integrated Applications → Company Preferences*, save, then run **Test QuickBooks Connection** and choose *Yes, always; allow access even if QuickBooks is not running*. QB Sync asks for unattended, read-only access, so that's the only "yes" option offered |
+| `0x80040440` can't return sensitive information without a complex password | Give the QuickBooks **Admin** and the QB Sync login user complex passwords (7+ characters with a number and an uppercase letter), then log in to QuickBooks once as the QB Sync user to get past QuickBooks' forced password change at first login |
+| Works with QuickBooks open, `0x80040430` when closed | `company_file` must be exactly the path QuickBooks uses: a mapped drive (`Q:\...`) and a UNC path (`\\server\...`) count as different files. **Test QuickBooks Connection** with QuickBooks open prints `file_opened_by_quickbooks` and the line to put in the config. A mapped drive works for the background task because it runs in your logged-on session |
 | `0x80040416` company file must be specified | Set `company_file` to the full UNC path |
 | `0x8004041A` no permission | Integrated Applications preferences, allow QB Sync |
 | `0x80040414` modal dialog showing | Someone has a QuickBooks dialog open on the sync host. Close it |

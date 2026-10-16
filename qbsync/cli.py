@@ -138,6 +138,12 @@ def main(argv: list[str] | None = None) -> int:
             _print({"ok": True, "qbxml_version": conn.qbxml_version, "company_name": company.get("CompanyName"),
                     "legal_name": company.get("LegalCompanyName"), "file": cfg["company_file"],
                     "file_opened_by_quickbooks": getattr(conn, "open_file", None)})
+            opened = getattr(conn, "open_file", None)
+            if opened and opened.lower() != (cfg["company_file"] or "").lower():
+                print(f"\nNOTE: QuickBooks has this file open as {opened}, but company_file is\n"
+                      f"{cfg['company_file'] or '(not set)'}. Automatic login while QuickBooks is closed only works\n"
+                      "with the path QuickBooks was approved on. Set in the config:\n"
+                      f"  company_file: '{opened}'", file=sys.stderr)
         finally:
             conn.close()
         return 0

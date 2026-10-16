@@ -30,7 +30,12 @@ MAX_QBXML_VERSION = 16.0
 HRESULT_HINTS = {
     0x80040430: "QuickBooks has not approved automatic login for this app. With QuickBooks open as Admin: Edit > "
     "Preferences > Integrated Applications > Company Preferences, Remove every QB Sync entry, save, then run "
-    "Test QuickBooks Connection and choose 'Yes, always; allow access even if QuickBooks is not running'.",
+    "Test QuickBooks Connection and choose 'Yes, always; allow access even if QuickBooks is not running'. "
+    "Also make sure company_file is exactly the path QuickBooks uses (a mapped drive like Q:\\ and a UNC path "
+    "count as different files), and that the login user has signed in to QuickBooks once.",
+    0x80040440: "QuickBooks only allows unattended access to a company file whose users have complex passwords. Set a "
+    "complex password for Admin and for the QB Sync login user (Company > Set Up Users and Passwords), then log "
+    "in to QuickBooks once as the QB Sync user, since QuickBooks may force a password change at first login.",
     0x80040408: "Could not start QuickBooks. Is QuickBooks Desktop installed on this machine and can this "
     "Windows user open it?",
     0x8004040A: "QuickBooks is open on this PC with a different company file (or the same file through a "
