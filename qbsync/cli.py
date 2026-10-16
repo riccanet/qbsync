@@ -52,6 +52,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--no-push", action="store_true", help="skip sinks")
     cmd.add_parser("run", help="sync and push every interval_minutes: the normal long-running mode")
     cmd.add_parser("test-webhook", help="send a test event (with sample records) to the configured webhook")
+    rs = cmd.add_parser("resend", help="push every stored record and report to the sinks again (no QuickBooks needed)")
+    rs.add_argument("--sink", action="append", help="only this sink: webhook or postgres (repeatable)")
     e = cmd.add_parser("export", help="write every entity to JSON Lines files (+ reports) for bulk ingestion")
     e.add_argument("--out", default="export")
     cmd.add_parser("status", help="show sync state and record counts")
@@ -162,6 +164,23 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             log.info("Stopped.")
         return 0
+
+    if args.command == "resend":
+        sinks = [x for x in service.sinks if not args.sink or x.name in args.sink]
+        if not sinks:
+            print("No matching sinks configured.")
+            return 1
+        failed = False
+        for sink in sinks:
+            sink.reset(service.store)
+            try:
+                sent = sink.push(service.store)
+                print(f"{sink.name}: re-sent {sent} records")
+            except Exception as exc:
+                failed = True
+                print(f"{sink.name}: FAILED after partial resend ({exc}); run resend again or let the next sync "
+                      "continue from where it stopped")
+        return 1 if failed else 0
 
     if args.command == "test-webhook":
         from .sinks import WebhookSink

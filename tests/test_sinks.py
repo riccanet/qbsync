@@ -125,3 +125,20 @@ def test_failed_sink_is_not_retried_for_every_entity(service, hook, monkeypatch)
     service.run_once()
     # one failed attempt mid-run, then one more at the end (+ the status event), not one per entity
     assert calls.count("changes") == 2
+
+
+def test_resend_pushes_everything_again(service, hook, tmp_path):
+    from qbsync.cli import main
+
+    service.sinks = [WebhookSink("testco", hook.url, "s3cret", batch_size=500)]
+    service.run_once()
+    first = sum(e["count"] for e in hook.of_type("changes"))
+    hook.events.clear()
+    import yaml
+    cfg = dict(service.cfg)
+    cfg["sinks"] = {"webhook": {"url": hook.url, "secret": "s3cret", "batch_size": 500}}
+    path = tmp_path / "c.yaml"
+    path.write_text(yaml.safe_dump(cfg))
+    assert main(["-c", str(path), "resend"]) == 0
+    assert sum(e["count"] for e in hook.of_type("changes")) == first
+    assert len(hook.of_type("reports")) == 1

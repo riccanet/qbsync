@@ -70,6 +70,11 @@ class Sink:
     def deliver(self, batch: list[dict[str, Any]], store: Store) -> None:
         raise NotImplementedError
 
+    def reset(self, store: Store) -> None:
+        """Forget what was delivered, so the next push sends every record (and report) again."""
+        store.set_meta(self.cursor_key, "0")
+        store.set_meta(f"sink_reports_hash:{self.name}", "")
+
     def after_push(self, store: Store) -> None:
         pass
 
@@ -93,7 +98,7 @@ class WebhookSink(Sink):
     RETRY_DELAYS = (2, 10, 30)
 
     def __init__(self, company_id: str, url: str, secret: str = "", batch_size: int = 200,
-                 timeout: int = 30, headers: dict[str, str] | None = None, send_status: str = "errors"):
+                 timeout: int = 120, headers: dict[str, str] | None = None, send_status: str = "errors"):
         super().__init__(company_id, batch_size)
         if send_status not in ("never", "errors", "always"):
             raise ValueError("webhook send_status must be never, errors or always")
@@ -299,7 +304,7 @@ def build_sinks(cfg: dict[str, Any]) -> list[Sink]:
     wh = (cfg.get("sinks") or {}).get("webhook")
     if wh and wh.get("url"):
         sinks.append(WebhookSink(company, wh["url"], wh.get("secret", ""), int(wh.get("batch_size", 200)),
-                                 int(wh.get("timeout", 30)), wh.get("headers"), wh.get("send_status", "errors")))
+                                 int(wh.get("timeout", 120)), wh.get("headers"), wh.get("send_status", "errors")))
     pg = (cfg.get("sinks") or {}).get("postgres")
     if pg and pg.get("dsn"):
         sinks.append(PostgresSink(company, pg["dsn"], pg.get("schema", "public"), pg.get("table", "qb_records"),

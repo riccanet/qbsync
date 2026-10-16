@@ -51,11 +51,11 @@ It also adds Start Menu shortcuts: **Test QuickBooks Connection**, **Sync Now**,
 
 ```bat
 :: as the logged-in standard user (per-user, no admin needed)
-QBSync-Setup-0.3.7.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" ^
+QBSync-Setup-0.3.8.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" ^
     /WEBHOOKURL="https://n8n.example.com/webhook/quickbooks" /WEBHOOKSECRET="<shared secret>"
 
 :: from an RMM as SYSTEM (machine-wide; the task runs as the standard user ACME\jsmith)
-QBSync-Setup-0.3.7.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" /USER="ACME\jsmith" ^
+QBSync-Setup-0.3.8.exe /S /COMPANYFILE="\\QBSERVER\QBData\Acme.QBW" /USER="ACME\jsmith" ^
     /WEBHOOKURL="https://n8n.example.com/webhook/quickbooks" /WEBHOOKSECRET="<shared secret>"
 ```
 
@@ -99,6 +99,7 @@ qbsync sync              # one incremental sync + push (first run pulls everythi
 qbsync sync --full       # ignore watermarks and re-pull everything
 qbsync run               # sync + push every interval_minutes (what the background task runs)
 qbsync test-webhook      # send a test event to the webhook
+qbsync resend            # push every stored record and report to the sinks again (no QuickBooks needed)
 qbsync status            # counts, watermarks, last errors, sink cursors
 qbsync export --out C:\Temp\qb-export   # JSONL per entity + reports.json
 ```
@@ -132,7 +133,7 @@ The webhook sink only makes **outbound HTTPS requests**, so it works from a work
 **n8n side:**
 1. Add a **Webhook** node: method `POST`, path e.g. `quickbooks`.
 2. Set **Authentication** to *Header Auth*, with a credential whose name is `X-QBSync-Token` and whose value is your shared secret.
-3. Turn on **Respond: Immediately** so QB Sync isn't kept waiting while the workflow runs.
+3. Set **Respond** to *When Last Node Finishes*, so n8n only answers once the rows are stored. If storing fails, QB Sync sees the error and retries; with *Immediately*, a failed or interrupted execution loses that batch. QB Sync waits up to `timeout` seconds (default 120) for the answer.
 4. Activate the workflow and copy its **Production URL**.
 
 **Workstation side:**
