@@ -168,7 +168,36 @@ All events include `company_id`, `host`, `sent_at` and `source`. A `changes` rec
 
 **Security.** Besides the header token, each request is signed with `X-QBSync-Signature: sha256=HMAC_SHA256(secret, raw_body)`, for receivers that want to verify the body.
 
-**Answering questions on demand.** The push only goes one way. For an n8n AI agent that needs to look things up at any time, have the workflow store what it receives (n8n Data Tables or Postgres, or use the Postgres sink below) and point the agent at that store.
+**Answering questions on demand.** The push only goes one way. Workflows that need to look things up at any time should read from what the receiver stored (see below), not from QuickBooks.
+
+## Using the data in n8n
+
+The receiver workflow (*QuickBooks Desktop Sync - Receiver*) stores everything it gets in four n8n Data Tables, so any other workflow can read them with a **Data table** node (operation *Get*, with conditions). Nothing reads QuickBooks directly.
+
+| Table | One row per | Key column |
+|---|---|---|
+| **QB Records** | company + entity + QuickBooks ID (customers, vendors, items, invoices, bills, payments...) | `record_key` = `company|entity|id` |
+| **QB Reports** | company + report (`title`, `basis`, `columns`, `rows`, `generated_at`) | `report_key` = `company|name` |
+| **QB Companies** | client company | `company_id`, with `last_seen_at` |
+| **QB Sync Log** | status event (`status`, `error`, `errors`, `totals`, `received_at`) | - |
+
+**QB Records columns:** `company_id`, `entity`, `record_id` (QuickBooks ListID/TxnID), `ret_type`, `label` (name or ref #), `ref_number`, `party` (customer/vendor/payee), `txn_date`, `due_date`, `amount`, `balance`, `is_active`, `is_paid`, `deleted`, `email`, `phone`, `memo`, `time_modified`, `synced_at`, and `data` (the full QuickBooks record as JSON text).
+
+**Example lookups** (Data table node, *Get*, match all conditions):
+
+| Question | Conditions |
+|---|---|
+| Unpaid invoices for a customer | `entity` = `Invoice`, `party` ilike `%Acme%`, `balance` > `0`, `deleted` = `false` |
+| A customer's contact details | `entity` = `Customer`, `label` = `Acme Dental` |
+| Recent bills | `entity` = `Bill`, `txn_date` >= `2026-10-01` |
+
+Things to know:
+- **Always filter on `company_id`** when more than one client pushes to the same n8n.
+- **Line items and other details** are in `data`. Parse it in an expression, e.g. `{{ JSON.parse($json.data).InvoiceLineRet }}`.
+- **Dates** (`txn_date`, `due_date`) are stored at 12:00 UTC so they don't shift a day in any time zone. For "on or before a date", compare with `<` the next day.
+- **Deleted records stay** in the table with `deleted` = `true`. Filter them out unless you want them.
+- **QB Reports:** `columns` holds the column titles, and `rows` is a JSON list of `{type, label, values}`, where `type` is `text`, `data`, `subtotal` or `total` and `values` is keyed by column title.
+- **Freshness:** data is as current as the last sync (every `interval_minutes`, default 15). Check `last_seen_at` in QB Companies to see when a client last pushed.
 
 ## Pushing to Postgres / Supabase
 
